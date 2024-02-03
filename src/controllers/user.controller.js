@@ -215,22 +215,53 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-const chnagePassword = asyncHandler(async(req, res)=>{
-    
-    //1. Destructure old password and new password from req.body
-    //2. Check if both the fields are provided
-    //3. Verify the old password
-    //4. update the new password
-    //4. return the response
+const changePassword = asyncHandler(async (req, res) => {
+  //1. Destructure old password and new password from req.body
+  //2. Check if both the fields are provided
+  //3. Verify the old password
+  //4. update the new password
+  //4. return the response
+
+  //1.
+  const { oldPassword, newPassword } = req.body;
+
+  //2.
+  if (!oldPassword || !newPassword) {
+    throw new ApiError(400, "Both the fields are required");
+  }
+
+  if(oldPassword === newPassword){
+    throw new ApiError(400,"Both the passwords are same")
+  }
+
+  //3.
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(401, "Unauthorized access");
+  }
 
 
-    //1.
-    const {oldPassword, newPassword} = req.body;
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
-    if(!oldPassword || !newPassword){
-        throw new ApiError(400,"Both the fields are required")
-    }
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "Incorrect old password");
+  }
 
-})
+  //5.
+  user.password = newPassword;
+  user.save({ validateBeforeSave: false });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+  //6.
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password updated Successfully"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changePassword,
+};
