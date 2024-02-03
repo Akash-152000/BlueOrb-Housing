@@ -2,7 +2,7 @@ import { User } from "../models/Users.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { uploadOnCloudinary } from "../utils/Cloudinary.js";
+import { deleteOldFileInCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { options } from "../constant.js";
 import jwt from "jsonwebtoken";
 
@@ -230,8 +230,8 @@ const changePassword = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Both the fields are required");
   }
 
-  if(oldPassword === newPassword){
-    throw new ApiError(400,"Both the passwords are same")
+  if (oldPassword === newPassword) {
+    throw new ApiError(400, "Both the passwords are same");
   }
 
   //3.
@@ -240,7 +240,6 @@ const changePassword = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(401, "Unauthorized access");
   }
-
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
@@ -258,10 +257,104 @@ const changePassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Password updated Successfully"));
 });
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "User data fetched successfully"));
+});
+
+const updateUserDetails = asyncHandler(async (req, res) => {
+  //1. Destructure all the data from req.body
+  //2. Check that atleast one field is provided
+  //3. Update the database
+  //4. Return the response
+
+  //1.
+  const { name, phone, email } = req.body;
+
+  //2.
+  if (!name && !phone && !email) {
+    throw new ApiError("Atleast provide one field to update");
+  }
+
+  //3.
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        name,
+        phone,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User Updated Successfully"));
+});
+
+const updateProfileImage = asyncHandler(async (req, res) => {
+  //1. Destructure the localfilepath from middleware
+  //2. Check if the file exists or not
+  //3. Upload on cloudinary
+  //4. Check if cloudinary function returned the url
+  //5. Update the database
+  //6. Delete the old url from cloudinary
+  //7. Return the response
+
+  //1.
+  const localfilepath = req.file?.path;
+
+  //2.
+  if (!localfilepath) {
+    throw new ApiError(400, "Please provide the file");
+  }
+
+  //3.
+  const cloudinaryUrl = await uploadOnCloudinary(localfilepath);
+
+  //4.
+  if (!cloudinaryUrl) {
+    throw new ApiError(
+      500,
+      "Something went wrong while uploading on cloudinary"
+    );
+  }
+
+  //5.
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        profileImage: cloudinaryUrl,
+      },
+    },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  //6.
+    const oldUrl = req.user.profileImage
+    try {
+        const isOldImageDelete = await deleteOldFileInCloudinary(oldUrl);
+      } catch (error) {
+        console.log("error - ", error);
+      }
+
+  //7.
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Profile image updated succesfully"));
+});
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   changePassword,
+  getCurrentUser,
+  updateUserDetails,
+  updateProfileImage
 };
