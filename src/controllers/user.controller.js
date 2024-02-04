@@ -2,7 +2,7 @@ import { User } from "../models/Users.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { deleteOldFileInCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js";
+import { deleteOldFileInCloudinary, uploadImageOnCloudinary } from "../utils/Cloudinary.js";
 import { options } from "../constant.js";
 import jwt from "jsonwebtoken";
 
@@ -59,7 +59,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   //5.
-  const profileImage = await uploadOnCloudinary(localPath);
+  const profileImage = await uploadImageOnCloudinary(localPath);
 
   if (!profileImage) {
     throw new ApiError(400, "Profile Image is required");
@@ -72,6 +72,7 @@ const registerUser = asyncHandler(async (req, res) => {
     phone,
     email,
     password,
+    role
   });
 
   //7.
@@ -313,7 +314,7 @@ const updateProfileImage = asyncHandler(async (req, res) => {
   }
 
   //3.
-  const cloudinaryUrl = await uploadOnCloudinary(localfilepath);
+  const cloudinaryUrl = await uploadImageOnCloudinary(localfilepath);
 
   //4.
   if (!cloudinaryUrl) {

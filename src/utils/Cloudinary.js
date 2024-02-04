@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import { CLOUDINARY_FOLDER } from "../constant.js";
 import fs from 'fs'
+import { ApiError } from "./ApiError.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,7 +9,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (localFilePath) => {
+const uploadImageOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
 
@@ -21,7 +22,27 @@ const uploadOnCloudinary = async (localFilePath) => {
     return response.url
   } catch (error) {
     fs.unlinkSync(localFilePath);
+    throw new ApiError(500,error.message || "Something went wrong on cloudinary")
     return null;
+  }
+};
+
+const uploadVideoOnCloudinary = async (localFilePath) => {
+  try {
+    if (!localFilePath) return null;
+
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: 'video',
+      folder: CLOUDINARY_FOLDER+"/PropertyVideos",
+    });
+
+    fs.unlinkSync(localFilePath);
+
+    return response.url
+  } catch (error) {
+    
+    fs.unlinkSync(localFilePath);
+    throw new ApiError(500,error.message || "Something went wrong on cloudinary")
   }
 };
 
@@ -43,4 +64,4 @@ const deleteOldFileInCloudinary = async (oldUrl) => {
   }
 };
 
-export { uploadOnCloudinary, deleteOldFileInCloudinary };
+export { uploadImageOnCloudinary,uploadVideoOnCloudinary, deleteOldFileInCloudinary };
