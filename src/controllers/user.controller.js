@@ -2,7 +2,11 @@ import { User } from "../models/Users.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { deleteOldFileInCloudinary, uploadImageOnCloudinary } from "../utils/Cloudinary.js";
+import {
+  deleteOldImageFileInCloudinary,
+  deleteOldVideoFileInCloudinary,
+  uploadImageOnCloudinary,
+} from "../utils/Cloudinary.js";
 import { options } from "../constant.js";
 import jwt from "jsonwebtoken";
 
@@ -72,7 +76,7 @@ const registerUser = asyncHandler(async (req, res) => {
     phone,
     email,
     password,
-    role
+    role,
   });
 
   //7.
@@ -273,20 +277,36 @@ const updateUserDetails = asyncHandler(async (req, res) => {
   //1.
   const { name, phone, email } = req.body;
 
-  //2.
-  if (!name && !phone && !email) {
-    throw new ApiError("Atleast provide one field to update");
+  //   if (
+  //     (name !== undefined && name?.trim() !== "") ||
+  //     (phone !== undefined && phone?.trim() !== "") ||
+  //     (email !== undefined && email?.trim() !== "")
+  //   ) {
+
+  const providedDataArray = [name, phone, email];
+
+  if (
+    !providedDataArray.some((item) => item !== undefined && item?.trim() !== "")
+  ) {
+    throw new ApiError(400, "At least one field is required");
   }
 
+  const updateObject = {};
+
+  if (name !== undefined && name.trim() !== "") {
+    updateObject.name = name;
+  }
+  if (phone !== undefined && phone.trim() !== "") {
+    updateObject.phone = phone;
+  }
+  if (email !== undefined && email.trim() !== "") {
+    updateObject.email = email;
+  }
   //3.
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      $set: {
-        name,
-        phone,
-        email,
-      },
+      $set: updateObject,
     },
     { new: true }
   ).select("-password");
@@ -294,6 +314,9 @@ const updateUserDetails = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, user, "User Updated Successfully"));
+  //   } else {
+  //     throw new ApiError(400, "At least provide one non-empty field");
+  //   }
 });
 
 const updateProfileImage = asyncHandler(async (req, res) => {
@@ -336,12 +359,12 @@ const updateProfileImage = asyncHandler(async (req, res) => {
   ).select("-password -refreshToken");
 
   //6.
-    const oldUrl = req.user.profileImage
-    try {
-        const isOldImageDelete = await deleteOldFileInCloudinary(oldUrl);
-      } catch (error) {
-        console.log("error - ", error);
-      }
+  const oldUrl = req.user.profileImage;
+  try {
+    const isOldImageDelete = await deleteOldImageFileInCloudinary(oldUrl);
+  } catch (error) {
+    console.log("error - ", error);
+  }
 
   //7.
   return res
@@ -357,5 +380,5 @@ export {
   changePassword,
   getCurrentUser,
   updateUserDetails,
-  updateProfileImage
+  updateProfileImage,
 };

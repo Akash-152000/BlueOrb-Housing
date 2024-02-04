@@ -46,7 +46,7 @@ const uploadVideoOnCloudinary = async (localFilePath) => {
   }
 };
 
-const deleteOldFileInCloudinary = async (oldUrl) => {
+const deleteOldImageFileInCloudinary = async (oldUrl) => {
   try {
     let publicIdToDelete = oldUrl.split("/BlueorbHousing").pop().split(".")[0];
     publicIdToDelete = "BlueorbHousing"+publicIdToDelete
@@ -63,5 +63,22 @@ const deleteOldFileInCloudinary = async (oldUrl) => {
     return null;
   }
 };
+const deleteOldVideoFileInCloudinary = async (oldUrl) => {
+  try {
+    let publicIdToDelete = oldUrl.split("/BlueorbHousing").pop().split(".")[0];
+    publicIdToDelete = "BlueorbHousing/PropertyVideos"+publicIdToDelete
+    await cloudinary.uploader.destroy(
+      publicIdToDelete,
+      { resource_type: "video" },
+      (error, result) => {
+        if (error) {
+          throw new ApiError(401, "Error in Uploading to cloud");
+        }
+      }
+    );
+  } catch (error) {
+    return null;
+  }
+};
 
-export { uploadImageOnCloudinary,uploadVideoOnCloudinary, deleteOldFileInCloudinary };
+export { uploadImageOnCloudinary,uploadVideoOnCloudinary, deleteOldImageFileInCloudinary, deleteOldVideoFileInCloudinary };

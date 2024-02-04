@@ -18,7 +18,7 @@ router.route("/logout-user").post(verifyJWT, logoutUser)
 router.route("/change-password").post(verifyJWT, changePassword)
 router.route("/get-current-user").get(verifyJWT, getCurrentUser)
 router.route("/update-user").post(verifyJWT, updateUserDetails)
-router.route("/update-profile-image").post(verifyJWT,upload.single("profileImage") , updateProfileImage)
+router.route("/update-profile-image").patch(verifyJWT,upload.single("profileImage") , updateProfileImage)
 
 
 export default router;
