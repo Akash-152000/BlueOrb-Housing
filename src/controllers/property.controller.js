@@ -181,4 +181,74 @@ const createProperty = asyncHandler(async (req, res) => {
   }
 });
 
-export { healthCheck, createProperty };
+const deleteProperty = asyncHandler(async(req, res)=>{
+    //1. Get the id from params
+    //2. Delete the property
+    //3. Return the response
+
+    //1.
+    const {id} = req.params
+
+    if(!id){
+        throw new ApiError(400,"Provide id of property to delete")
+    }
+    
+    //2.
+    const propertyToDelete = await Property.findByIdAndDelete(id)
+
+    if(!propertyToDelete){
+        throw new ApiError(400,"Property not found")
+    }
+
+    //3.
+    return res
+    .status(200)
+    .json(new ApiResponse(200,"Property has been deleted"))
+
+
+
+})
+
+const getMyProperties = asyncHandler(async(req, res)=>{
+    
+    const properties = await Property.find({owner: req.user._id})
+
+    if(!properties){
+        throw new ApiError(404,"Properties not found")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,properties,"Properties Fetched Succesfully"))
+
+})
+
+const getSingleProperty = asyncHandler(async(req, res)=>{
+    //1. Get the id from params
+    //2. Fetch the property
+    //3. Return the response
+
+    //1.
+    const {id} = req.params
+
+    if(!id){
+        throw new ApiError(400,"Provide id of property to find")
+    }
+    
+    //2.
+    const property = await Property.findById(id)
+
+    if(!property){
+        throw new ApiError(400,"Property not found")
+    }
+
+    //3.
+    return res
+    .status(200)
+    .json(new ApiResponse(200,property,"Property has been feteched"))
+
+
+
+})
+
+export { healthCheck, createProperty, deleteProperty, getMyProperties, getSingleProperty };
