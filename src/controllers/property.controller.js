@@ -6,6 +6,7 @@ import {
   uploadVideoOnCloudinary,
 } from "../utils/Cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import mongoose from "mongoose";
 
 const healthCheck = (req, res) => {
   console.log(req.files);
@@ -121,7 +122,7 @@ const createProperty = asyncHandler(async (req, res) => {
     let cloudinaryVideoUrlArray;
 
     if (videosLocalPathArray) {
-      const cloudinaryVideoUrlArray = await Promise.all(
+      cloudinaryVideoUrlArray = await Promise.all(
         videosLocalPathArray.map((video) => uploadVideoOnCloudinary(video))
       );
     }
@@ -221,7 +222,8 @@ const getMyProperties = asyncHandler(async (req, res) => {
 const getSingleProperty = asyncHandler(async (req, res) => {
   //1. Get the id from params
   //2. Fetch the property
-  //3. Return the response
+  //3. Add the user to views array
+  //4. Return the response
 
   //1.
   const { id } = req.params;
@@ -237,6 +239,14 @@ const getSingleProperty = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Property not found");
   }
 
+  //4.
+  const currentUserId = req.user._id;
+
+  if (!property.views.includes(currentUserId)) {
+    property.views.push(currentUserId);
+    await property.save();
+  }
+
   //3.
   return res
     .status(200)
@@ -244,17 +254,75 @@ const getSingleProperty = asyncHandler(async (req, res) => {
 });
 
 const getAllProperties = asyncHandler(async (req, res) => {
-  const properties = await Property.find();
+  const { page = 1, limit = 4, city, range, sortBy, sortType, type, transactionType } = req.query;
 
-  if (!properties) {
-    throw new ApiError(500, "Internal server error");
-  }
+  try {
+    const baseQuery = {};
+    if (city) {
+      baseQuery.city = { $regex: city, $options: "i" };
+    }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, properties, "All Properties fetched succesfully")
+    if (range) {
+      const amountParts = range.split("-");
+      console.log(amountParts);
+
+      if (amountParts.length === 2) {
+        // If amount is provided as a range, search for values within the range
+        const lowerBound = parseInt(amountParts[0].trim(), 10);
+        const upperBound = parseInt(amountParts[1].trim(), 10);
+
+        if (!isNaN(lowerBound) && !isNaN(upperBound)) {
+          // Only include the range filter if both lower and upper bounds are valid numbers
+          baseQuery.amount = { $gte: lowerBound, $lte: upperBound };
+        }
+      } else {
+        // If amount is provided as a single value, search for an exact match
+        baseQuery.amount = { $eq: amount };
+      }
+    }
+
+    if(type){
+        baseQuery.propertyType = {$regex: type, $options: "i"}
+    }
+
+    if(transactionType){
+        baseQuery.transactionType = {$regex: transactionType, $options: "i"}
+    }
+
+    console.log(baseQuery);
+
+    const sortOptions = {};
+    if (sortBy) {
+      sortOptions[sortBy] = sortType === "desc" ? -1 : 1;
+    }
+
+    const properties = await Property.aggregatePaginate(
+      Property.aggregate([
+        { $match: { ...baseQuery } },
+        { $sort: sortOptions },
+        { $skip: (page - 1) * limit },
+        { $limit: parseInt(limit) },
+      ])
     );
+
+    //   await Property.find();
+
+    if (!properties) {
+      throw new ApiError(500, "Internal server error");
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, properties, "All Properties fetched succesfully")
+      );
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      data: error.message,
+    });
+  }
 });
 
 const updateproperty = asyncHandler(async (req, res) => {
@@ -406,7 +474,7 @@ const updatePropertyImages = asyncHandler(async (req, res) => {
     ) {
       imagesLocalPathArray = req.files.images.map((file) => file.path);
     } else {
-      throw new ApiError(400, "Please Choose Images to add");
+      throw new ApiError(404, "Please Choose Images to add");
     }
 
     const cloudinaryImageUrlArray = await Promise.all(
@@ -423,9 +491,13 @@ const updatePropertyImages = asyncHandler(async (req, res) => {
     //2.
     const property = await Property.findById(req.params.id);
 
-    property.images = property.images.concat(cloudinaryImageUrlArray)
+    if (!property) {
+      throw new ApiError(400, "Property not found");
+    }
 
-    await property.save()
+    property.images = property.images.concat(cloudinaryImageUrlArray);
+
+    await property.save();
 
     //3.
     return res
@@ -440,9 +512,223 @@ const updatePropertyImages = asyncHandler(async (req, res) => {
   }
 });
 
-const updatePropertyVideos = asyncHandler(async(req,res)=>{
+const updatePropertyVideos = asyncHandler(async (req, res) => {
+  //1. Get the videos from req.file
+  //2. Find by Id and Update the database
+  //3. Return response
 
-})
+  try {
+    //1.
+    let videosLocalPathArray;
+
+    if (
+      req.files &&
+      Array.isArray(req.files.videos) &&
+      req.files.videos.length > 0
+    ) {
+      videosLocalPathArray = req.files.videos.map((file) => file.path);
+    } else {
+      throw new ApiError(404, "Please Choose videos to add");
+    }
+
+    const cloudinaryVideoUrlArray = await Promise.all(
+      videosLocalPathArray.map((video) => uploadVideoOnCloudinary(video))
+    );
+
+    if (!cloudinaryVideoUrlArray.length) {
+      throw new ApiError(
+        500,
+        "Something went wrong while uploading videos on cloudinary"
+      );
+    }
+
+    //2.
+    const property = await Property.findById(req.params.id);
+
+    if (!property) {
+      throw new ApiError(400, "Property not found");
+    }
+
+    property.videos = property.videos.concat(cloudinaryVideoUrlArray);
+
+    await property.save();
+
+    //3.
+    return res
+      .status(200)
+      .json(new ApiResponse(200, property, "videos Updated Successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message ||
+        "Something went wrong while uploading videos on cloudinary"
+    );
+  }
+});
+
+const deletePropertyImages = asyncHandler(async (req, res) => {
+  //1. Get the array containing urls to delete from req.body
+  //2. Check if array is empty
+  //3. Find the property by Id
+  //4. Check if property exists or not
+  //5. Check if Image array database has atleast 1 image
+  //6. Filter the recieved urls from database
+  //7. Save
+  //8. Return response
+
+  //1.
+  const { receivedUrlArray } = req.body;
+
+  //2.
+  if (!receivedUrlArray || !receivedUrlArray.length) {
+    throw new ApiError(404, "Please provide images to delete");
+  }
+
+  //3.
+  const property = await Property.findById(req.params.id);
+
+  //4.
+  if (!property) {
+    throw new ApiError(404, "Property not found");
+  }
+
+  //5.
+  if (property?.images.length - receivedUrlArray.length <= 0) {
+    throw new ApiError(404, "Atleast One Image is required");
+  }
+
+  //6.
+  property.images = property.images.filter(
+    (image) => !receivedUrlArray.includes(image)
+  );
+
+  //7.
+  property.save();
+
+  //8.
+  return res
+    .status(200)
+    .json(new ApiResponse(200, property, "Images deleted successfully"));
+});
+
+const deletePropertyVideos = asyncHandler(async (req, res) => {
+  //1. Get the array containing urls to delete from req.body
+  //2. Check if array is empty
+  //3. Find the property by Id
+  //4. Check if property exists or not
+  //5. Check if videos array database has atleast 1 video
+  //6. Filter the recieved urls from database
+  //7. Save
+  //8. Return response
+
+  //1.
+  const { receivedUrlArray } = req.body;
+
+  //2.
+  if (!receivedUrlArray || !receivedUrlArray.length) {
+    throw new ApiError(404, "Please provide videos to delete");
+  }
+
+  //3.
+  const property = await Property.findById(req.params.id);
+
+  //4.
+  if (!property) {
+    throw new ApiError(404, "Property not found");
+  }
+
+  //5.
+  if (property?.videos.length - receivedUrlArray.length <= 0) {
+    throw new ApiError(404, "Atleast One Video is required");
+  }
+
+  //6.
+  const originalLength = property.videos.length;
+
+  property.videos = property.videos.filter(
+    (video) => !receivedUrlArray.includes(video)
+  );
+
+  const removedCount = originalLength - property.videos.length;
+
+  if (removedCount > 0) {
+    //7.
+    property.save();
+  } else {
+    throw new ApiError(400, "Please provide valid images");
+  }
+
+  //8.
+  return res
+    .status(200)
+    .json(new ApiResponse(200, property, "Images deleted successfully"));
+});
+
+const getWhoVisitedPropertyPage = asyncHandler(async (req, res) => {
+  const property = await Property.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.params.id),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "views",
+        foreignField: "_id",
+        as: "viewersInfo",
+      },
+    },
+    {
+      $project: {
+        viewersInfo: {
+          name: 1,
+          email: 1,
+          phone: 1,
+        },
+      },
+    },
+  ]);
+
+  if (!property) {
+    throw new ApiError(404, "No viewers found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        property[0].viewersInfo,
+        "Visitors fetched successfully"
+      )
+    );
+});
+
+const getTotalViews = asyncHandler(async (req, res) => {
+  //1. Find the propert by id
+  //2. Check if property exists
+  //3. return reponse and length of views
+
+  //1.
+  const property = await Property.findById(req.params.id);
+
+  //2.
+  if (!property) {
+    throw new ApiError(404, "Property not found");
+  }
+
+  //3.
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        property?.views.length,
+        "Total no of views Fetched successfully"
+      )
+    );
+});
 
 export {
   healthCheck,
@@ -453,5 +739,9 @@ export {
   getAllProperties,
   updateproperty,
   updatePropertyImages,
-  updatePropertyVideos
+  updatePropertyVideos,
+  deletePropertyImages,
+  deletePropertyVideos,
+  getWhoVisitedPropertyPage,
+  getTotalViews,
 };

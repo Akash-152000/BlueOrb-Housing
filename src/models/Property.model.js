@@ -35,7 +35,7 @@ const propertySchema = new Schema(
       required: true,
     },
     amount: {
-      type: String,
+      type: Number,
       required: true,
     },
     propertyType: {
@@ -91,7 +91,7 @@ const propertySchema = new Schema(
     tenantType: {
       type: String,
       enum: ["Single-Men", "Family", "Single-Women", "All"],
-      required:true
+      required: true,
     },
     videos: {
       type: [
@@ -103,53 +103,55 @@ const propertySchema = new Schema(
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required:true
+      required: true,
     },
-    gym:{
-        type: String,
-        enum:["Available","Unavailable"],
-        default:'Unavailable'
+    gym: {
+      type: String,
+      enum: ["Available", "Unavailable"],
+      default: "Unavailable",
     },
-    visitorParking:{
-        type: String,
-        enum:["Available", "Unavailable"],
-        default:'Unavailable'
+    visitorParking: {
+      type: String,
+      enum: ["Available", "Unavailable"],
+      default: "Unavailable",
     },
-    garden:{
-        type: String,
-        enum:["Available", "Unavailable"],
-        default:'Unavailable'
+    garden: {
+      type: String,
+      enum: ["Available", "Unavailable"],
+      default: "Unavailable",
     },
-    swimmingPool:{
-        type: String,
-        enum:["Available", "Unavailable"],
-        default:'Unavailable'
+    swimmingPool: {
+      type: String,
+      enum: ["Available", "Unavailable"],
+      default: "Unavailable",
     },
-    clubHouse:{
-        type: String,
-        enum:["Available", "Unavailable"],
-        default:'Unavailable'
+    clubHouse: {
+      type: String,
+      enum: ["Available", "Unavailable"],
+      default: "Unavailable",
     },
-    nearbySchool:{
-        type: String,
-        required: true
+    nearbySchool: {
+      type: String,
+      required: true,
     },
-    nearbyHospital:{
-        type: String,
-        required: true
+    nearbyHospital: {
+      type: String,
+      required: true,
     },
-    nearbyBusStation:{
-        type: String,
-        required: true
+    nearbyBusStation: {
+      type: String,
+      required: true,
     },
-    nearbyRailwayStation:{
-        type: String,
-        required: true
+    nearbyRailwayStation: {
+      type: String,
+      required: true,
     },
-    views: {
-      type: Number,
-      default: 0,
-    },
+    views: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -23,7 +23,6 @@ const uploadImageOnCloudinary = async (localFilePath) => {
   } catch (error) {
     fs.unlinkSync(localFilePath);
     throw new ApiError(500,error.message || "Something went wrong on cloudinary")
-    return null;
   }
 };
 
