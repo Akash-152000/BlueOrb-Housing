@@ -254,7 +254,17 @@ const getSingleProperty = asyncHandler(async (req, res) => {
 });
 
 const getAllProperties = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 4, city, range, sortBy, sortType, type, transactionType } = req.query;
+  const {
+    page = 1,
+    limit = 4,
+    city,
+    range,
+    sortBy,
+    sortType,
+    type,
+    transactionType,
+    availableFrom,
+  } = req.query;
 
   try {
     const baseQuery = {};
@@ -281,12 +291,21 @@ const getAllProperties = asyncHandler(async (req, res) => {
       }
     }
 
-    if(type){
-        baseQuery.propertyType = {$regex: type, $options: "i"}
+    if (type) {
+      baseQuery.propertyType = { $regex: type, $options: "i" };
     }
 
-    if(transactionType){
-        baseQuery.transactionType = {$regex: transactionType, $options: "i"}
+    if (transactionType) {
+      baseQuery.transactionType = { $regex: transactionType, $options: "i" };
+    }
+
+    if (availableFrom) {
+        console.log(new Date(availableFrom));
+    //   if (isNaN(availableFrom.getTime())) {
+    //     // Handle invalid date format
+    //     throw new ApiError(400,"Inavalid date format")
+    //   }
+      baseQuery.availableFrom = { $gte: availableFrom }
     }
 
     console.log(baseQuery);
