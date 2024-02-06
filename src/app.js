@@ -20,11 +20,13 @@ app.use(cookieParser())
 import userRouter from "./routes/user.routes.js";
 import propertyRouter from './routes/property.routes.js'
 import likeRouter from'./routes/like.routes.js'
+import reviewRouter from'./routes/review.routes.js'
 
 //Routes Declaration
 app.use('/api/v1/users', userRouter)
 app.use('/api/v1/properties', propertyRouter)
 app.use('/api/v1/likes', likeRouter)
+app.use('/api/v1/reviews', reviewRouter)
 
 
 export { app };

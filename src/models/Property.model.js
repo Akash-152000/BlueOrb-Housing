@@ -131,19 +131,19 @@ const propertySchema = new Schema(
       default: "Unavailable",
     },
     nearbySchool: {
-      type: String,
+      type: Number,
       required: true,
     },
     nearbyHospital: {
-      type: String,
+      type: Number,
       required: true,
     },
     nearbyBusStation: {
-      type: String,
+      type: Number,
       required: true,
     },
     nearbyRailwayStation: {
-      type: String,
+      type: Number,
       required: true,
     },
     views: [
