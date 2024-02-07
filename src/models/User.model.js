@@ -14,7 +14,7 @@ const userSchema = new Schema(
       required: true,
     },
     phone: {
-      type: String,
+      type: Number,
       required: [true, "Phone number is required"],
       maxLength: [10, "Phone number cannot be more than 10 characters"],
       minLength: [10, "Phone number cannot be less than 10 characters"],

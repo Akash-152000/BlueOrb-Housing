@@ -2,6 +2,8 @@ import { Property } from "../models/Property.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import {
+  deleteOldImageFileInCloudinary,
+  deleteOldVideoFileInCloudinary,
   uploadImageOnCloudinary,
   uploadVideoOnCloudinary,
 } from "../utils/Cloudinary.js";
@@ -195,11 +197,34 @@ const deleteProperty = asyncHandler(async (req, res) => {
   }
 
   //2.
-  const propertyToDelete = await Property.findByIdAndDelete(id);
+
+  const propertyToDelete = await Property.findById(id);
 
   if (!propertyToDelete) {
     throw new ApiError(400, "Property not found");
   }
+
+  // Delete older images and videos from cloudinary as well
+  const images = propertyToDelete.images;
+  const videos = propertyToDelete.videos;
+
+  if (images.length > 0) {
+    await Promise.all(
+      images.map(async (oldUrl) => {
+        await deleteOldImageFileInCloudinary(oldUrl);
+      })
+    );
+  }
+
+  if (videos.length > 0) {
+    await Promise.all(
+      videos.map(async (oldUrl) => {
+        await deleteOldVideoFileInCloudinary(oldUrl);
+      })
+    );
+  }
+
+  const propertyDeleted = await Property.findByIdAndDelete(id);
 
   //3.
   return res
@@ -300,12 +325,12 @@ const getAllProperties = asyncHandler(async (req, res) => {
     }
 
     if (availableFrom) {
-        console.log(new Date(availableFrom));
-    //   if (isNaN(availableFrom.getTime())) {
-    //     // Handle invalid date format
-    //     throw new ApiError(400,"Inavalid date format")
-    //   }
-      baseQuery.availableFrom = { $gte: availableFrom }
+      console.log(new Date(availableFrom));
+      //   if (isNaN(availableFrom.getTime())) {
+      //     // Handle invalid date format
+      //     throw new ApiError(400,"Inavalid date format")
+      //   }
+      baseQuery.availableFrom = { $gte: availableFrom };
     }
 
     console.log(baseQuery);
@@ -616,13 +641,20 @@ const deletePropertyImages = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Atleast One Image is required");
   }
 
+  // Delete older images from cloudinary as well
+  await Promise.all(
+    receivedUrlArray.map(async (oldUrl) => {
+      await deleteOldImageFileInCloudinary(oldUrl);
+    })
+  );
+
   //6.
   property.images = property.images.filter(
     (image) => !receivedUrlArray.includes(image)
   );
 
   //7.
-  property.save();
+  await property.save();
 
   //8.
   return res
@@ -657,12 +689,19 @@ const deletePropertyVideos = asyncHandler(async (req, res) => {
   }
 
   //5.
-  if (property?.videos.length - receivedUrlArray.length <= 0) {
-    throw new ApiError(404, "Atleast One Video is required");
+  if (property?.videos.length === 0) {
+    console.log("first", property?.videos.length, receivedUrlArray.length);
+    throw new ApiError(404, "Property does not have any video");
   }
 
   //6.
   const originalLength = property.videos.length;
+
+  await Promise.all(
+    receivedUrlArray.map(async (oldUrl) => {
+      await deleteOldVideoFileInCloudinary(oldUrl);
+    })
+  );
 
   property.videos = property.videos.filter(
     (video) => !receivedUrlArray.includes(video)
@@ -674,13 +713,13 @@ const deletePropertyVideos = asyncHandler(async (req, res) => {
     //7.
     property.save();
   } else {
-    throw new ApiError(400, "Please provide valid images");
+    throw new ApiError(400, "Please provide valid videos");
   }
 
   //8.
   return res
     .status(200)
-    .json(new ApiResponse(200, property, "Images deleted successfully"));
+    .json(new ApiResponse(200, property, "Videos deleted successfully"));
 });
 
 const getWhoVisitedPropertyPage = asyncHandler(async (req, res) => {

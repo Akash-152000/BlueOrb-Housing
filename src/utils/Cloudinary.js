@@ -65,7 +65,8 @@ const deleteOldImageFileInCloudinary = async (oldUrl) => {
 const deleteOldVideoFileInCloudinary = async (oldUrl) => {
   try {
     let publicIdToDelete = oldUrl.split("/BlueorbHousing").pop().split(".")[0];
-    publicIdToDelete = "BlueorbHousing/PropertyVideos"+publicIdToDelete
+    publicIdToDelete = "BlueorbHousing"+publicIdToDelete
+    console.log("PublicIdToDelete", publicIdToDelete)
     await cloudinary.uploader.destroy(
       publicIdToDelete,
       { resource_type: "video" },
@@ -76,6 +77,7 @@ const deleteOldVideoFileInCloudinary = async (oldUrl) => {
       }
     );
   } catch (error) {
+    console.log(error.message)
     return null;
   }
 };

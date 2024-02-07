@@ -79,6 +79,8 @@ const registerUser = asyncHandler(async (req, res) => {
     role,
   });
 
+
+  const { accessToken, refreshToken } = await generateTokens(user._id);
   //7.
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
@@ -92,6 +94,8 @@ const registerUser = asyncHandler(async (req, res) => {
   //9.
   return res
     .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(new ApiResponse(200, createdUser, "User Registered Succesfully"));
 });
 

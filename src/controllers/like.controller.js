@@ -1,4 +1,5 @@
 import { Like } from "../models/Like.model.js";
+import { Notification } from "../models/Notification.model.js";
 import { Property } from "../models/Property.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -14,7 +15,6 @@ const togglePropertyLike = asyncHandler(async (req, res) => {
   //1.
   const { propertyId } = req.params;
 
-
   //3.
   const property = await Property.findById(propertyId);
 
@@ -23,7 +23,6 @@ const togglePropertyLike = asyncHandler(async (req, res) => {
   }
 
   //4.
-  
 
   const conditions = { likedBy: req.user._id, property: propertyId };
 
@@ -36,7 +35,17 @@ const togglePropertyLike = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, removeLike, "Like removed successfully"));
   } else {
-    const addLike = await Like.create({ property: propertyId, likedBy: req.user._id });
+    const addLike = await Like.create({
+      property: propertyId,
+      likedBy: req.user._id,
+    });
+
+    const notification = await Notification({
+      sender: req.user._id,
+      receiver: property.owner,
+      type: "Like",
+    });
+    await notification.save();
 
     return res
       .status(200)
@@ -44,16 +53,22 @@ const togglePropertyLike = asyncHandler(async (req, res) => {
   }
 });
 
-const getLikedProperties = asyncHandler(async(req, res)=>{
-    const likedProperties = await Like.find({likedBy:req.user._id})
+const getLikedProperties = asyncHandler(async (req, res) => {
+  const likedProperties = await Like.find({ likedBy: req.user._id });
 
-    if(!likedProperties){
-        throw new ApiError(404,"No properties liked")
-    }
+  if (!likedProperties) {
+    throw new ApiError(404, "No properties liked");
+  }
 
-    return res
+  return res
     .status(200)
-    .json(new ApiResponse(200,likedProperties,"Liked Properties Fetched Successfully"))
-})
+    .json(
+      new ApiResponse(
+        200,
+        likedProperties,
+        "Liked Properties Fetched Successfully"
+      )
+    );
+});
 
 export { togglePropertyLike, getLikedProperties };
