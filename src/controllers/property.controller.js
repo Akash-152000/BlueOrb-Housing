@@ -326,10 +326,6 @@ const getAllProperties = asyncHandler(async (req, res) => {
 
     if (availableFrom) {
       console.log(new Date(availableFrom));
-      //   if (isNaN(availableFrom.getTime())) {
-      //     // Handle invalid date format
-      //     throw new ApiError(400,"Inavalid date format")
-      //   }
       baseQuery.availableFrom = { $gte: availableFrom };
     }
 
