@@ -325,11 +325,8 @@ const getAllProperties = asyncHandler(async (req, res) => {
     }
 
     if (availableFrom) {
-      console.log(new Date(availableFrom));
       baseQuery.availableFrom = { $gte: availableFrom };
     }
-
-    console.log(baseQuery);
 
     const sortOptions = {};
     if (sortBy) {
